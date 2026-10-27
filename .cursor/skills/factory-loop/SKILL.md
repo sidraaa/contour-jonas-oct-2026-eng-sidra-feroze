@@ -131,9 +131,9 @@ Run this step **only after** the pull request has passed manual review (and merg
 
 Post a **final Comment** if anything changed since the PR comment (optional if the PR comment already covers verification). **Attach screenshot(s)** when the skill requires proof on the ticket.
 
-Apply the `answered` label, dismiss the label menu so it saves, then **Close issue** → **Close as completed** with an empty comment box. Do not use **Close with comment** for the verification post.
+Apply the `answered` label, dismiss the label menu so it saves, then follow **Browser writes → Close** (one Close click only).
 
-Verify with `gh issue view <n> --json state,stateReason,labels,comments` and `gh pr view` (or the PR page) that the PR state matches your process.
+Verify with `gh issue view <n> --json state,stateReason,labels,comments` and `gh pr view` (or the PR page). `stateReason: REOPENED` means you clicked Close twice — snapshot the button; click **Close issue** once only if it currently says that, then stop.
 
 ## Factual-only tickets
 
@@ -199,10 +199,25 @@ Issue URL: `https://github.com/<owner>/<repo>/issues/<n>`
 
 - **Issue number vs ticket title:** GitHub issue `#n` is not always the same as “Ticket #N” in the title (for example “Ticket #4” may be issue `#5`). Use `gh issue list` / the issue title to pick the right `#n`.
 - React: open **React**, choose 👀.
-- Comment: fill **Add a comment**, attach screenshot files when closing build tickets, click **Comment**. For React-controlled textareas, use `browser_type` or set `HTMLTextAreaElement` value via the native setter and dispatch an `input` event — plain `textarea.value = …` can submit as `undefined`.
 - Label: **Edit Labels**, filter `answered`, check **answered** (create if missing), then dismiss the menu so the label saves.
-- Close: post the verification **Comment** first (with screenshot). Leave the comment box empty, then **Close issue** → **Close as completed**. Do not use **Close with comment** for the verification post. Stop when the control says **Reopen issue**.
-- If the comment composer fails to load, reload the issue page before commenting.
+- If the comment composer or React control is missing, reload once, then continue. Do not type into a missing box.
+
+**Comment (hard gate — React textareas):** GitHub ignores `textarea.value = …`. That posts the literal word `undefined`.
+
+1. Fill **Add a comment** with `browser_type`, or the native `HTMLTextAreaElement` value setter plus `input` and `change` events.
+2. **Read back** `textarea.value` (CDP or snapshot). Abort if it is empty, `undefined`, or `null`. The first line must match what you meant to post.
+3. Click **Comment** only — never **Close with comment** for the verification post. Attach screenshots on build close comments when you can.
+4. Confirm the new comment is visible in **Activity** with the real text before doing anything else.
+
+**Close (hard gate — the button toggles):** The same control is Close, then Reopen. A second click or a CDP `element.click()` reopens the issue.
+
+1. Comment is already on the thread. Comment box is empty.
+2. Snapshot and read the button’s accessible name:
+   - **Close issue** / **Close as completed** → click it **once**.
+   - **Close with comment** → wrong control; do not click.
+   - **Reopen issue** → already closed; **stop**.
+3. Snapshot again. If the button now says **Reopen issue**, you are done. Do not click it. Do not “confirm” with a second click.
+4. Never close via `HTMLElement.click()` / CDP `Input` on this button. Use `browser_click` on a fresh snapshot ref only.
 
 ## Loop behavior on build tickets
 
